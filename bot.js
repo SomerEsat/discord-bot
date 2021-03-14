@@ -8,7 +8,7 @@ const client = new Discord.Client();
 const prefix = "/";
 
 // Message delete timeout 
-const msgTimeout = 10000;
+const msgTimeout = 15000;
 
 // Login to server 
 client.login(process.env.DISCORD_BOT_TOKEN);
