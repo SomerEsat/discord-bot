@@ -7,6 +7,9 @@ const client = new Discord.Client();
 // Bot prefix
 const prefix = "/";
 
+// Message delete timeout 
+const msgTimeout = 10000;
+
 // Login to server 
 client.login(process.env.DISCORD_BOT_TOKEN);
 
@@ -25,7 +28,7 @@ client.on('message', (msg) => {
 
     // Parse the command
     const commandBody = msg.content.slice(prefix.length);
-    const args = commandBody.split(' ');
+    const args = commandBody.split(',');
     const command = args[0].toLowerCase();
 
     // inv 
@@ -33,26 +36,25 @@ client.on('message', (msg) => {
 
         // Check role
         if (msg.guild.roles.cache.find(role => role.name === "Admin")) {
-            msg.channel.send(adminCommandsEmbed);
+            sendMessageWithTimeout(msg, adminCommandsEmbed, msgTimeout);
         } else {
-            msg.channel.send(commandsEmbed);
+            sendMessageWithTimeout(msg, commandsEmbed, msgTimeout);
         }
-
     }
 
     // accounts
     else if (command === 'accounts' || command === 'acc') {
-        msg.channel.send(accountsEmbed);
+        sendMessageWithTimeout(msg, accountsEmbed, msgTimeout);
     }
 
-    // contracts
+    // contracts  
     else if (command === 'contracts' || command === 'con') {
-        msg.channel.send(contractsEmbed);
+        sendMessageWithTimeout(msg, contractsEmbed, msgTimeout);
     }
 
     // tokens 
     else if (command === 'tokens' || command === 'tok') {
-        msg.channel.send(tokensEmbed);
+        sendMessageWithTimeout(msg, tokensEmbed, msgTimeout);
     }
 
     // Add mission (admin only)
@@ -63,12 +65,11 @@ client.on('message', (msg) => {
 
             // Only add if values present
             if (!args[1] || !args[2]) {
-                msg.channel.send('Nothing to add. Provide both a key and a value.');
+                sendMessageWithTimeout(msg, 'Nothing to add. Provide both a key and a value.', msgTimeout);
             }
             else {
                 missions[args[1]] = args[2];
-
-                msg.channel.send('Mission added: ' + args[1] + ': ' + args[2]);
+                sendMessageWithTimeout(msg, 'Mission added: ' + args[1] + ': ' + args[2], msgTimeout);
             }
         }
     }
@@ -79,26 +80,27 @@ client.on('message', (msg) => {
         // Check role
         if (msg.guild.roles.cache.find(role => role.name === "Admin")) {
 
-            // Check if mission exists
+            // Check if mission exists 
             if (!missions[args[1]]) {
-                msg.channel.send('No such mission. Use /miss to see a list of missions.');
+                sendMessageWithTimeout(msg, 'No such mission. Use /miss to see a list of missions.', msgTimeout);
             }
             else {
-                msg.channel.send('Mission removed: ' + args[1] + ': ' + missions[args[1]]);
+                sendMessageWithTimeout(msg, 'Mission removed: ' + args[1] + ': ' + missions[args[1]], msgTimeout);
 
                 delete missions[args[1]];
             }
         }
     }
 
-    // list missions 
+    // List missions
     else if (command === 'missions' || command === 'miss') {
 
-        // Check if empty 
+        // Check if empty
         if (isEmpty(missions)) {
-            msg.channel.send('No missions at the moment.')
+            sendMessageWithTimeout(msg, 'No missions at the moment.', msgTimeout);
         }
         else {
+            // No timeout 
             msg.channel.send('-- Missions --\n')
             for (var m in missions) {
                 msg.channel.send(m + ': ' + missions[m]);
@@ -179,7 +181,15 @@ const tokensEmbed = new Discord.MessageEmbed()
 
 //-------------------------------------------------------------------------- Helper Functions
 
-// Checks if object is empty
+// Send an embed message with a timeout to delete it 
+function sendMessageWithTimeout(msgObj, msgToSend, timeout) {
+    msgObj.channel.send(msgToSend).then(embedMessage => {
+        setTimeout(() => msgObj.delete(), timeout);
+        setTimeout(() => embedMessage.delete(), timeout);
+    });
+}
+
+// Check if object is empty
 function isEmpty(obj) {
     for (var key in obj) {
         if (obj.hasOwnProperty(key))
