@@ -14,11 +14,12 @@ const client = new Discord.Client();
 const prefix = "/";
 
 // Message delete timeout 
-const msgTimeout = 30000;
+const msgTimeout = 35000;
 
 // Role IDs
 const adminRole = '790157976840175636'; // IF Admin Role 790157976840175636 // Test Admin Role 820466679179378688
-const invaderRole = '820973908710785074'; // IF INVader_OnDuty 820973908710785074 // Test Admin Role 820765260553781349
+const invaderRole = '820973908710785074'; // IF INVader_OnDuty 820973908710785074 // Test Member Role 820765260553781349
+const moderatorRole = '790158060617465876'; // IF Moderator Role 790158060617465876 // Test Moderator Role 822910441889071104
 
 // Global scope storage for mission data
 var missions = {};
@@ -69,9 +70,9 @@ client.on('message', (msg) => {
     // Add mission (admin only)
     else if (command === 'addmission' || command === 'am') {
 
-        // Check for Admin role
-        if (!msg.member.roles.cache.has(adminRole)) {
-            sendMessageWithTimeout(msg, 'Adding missions requires the Admin role.', msgTimeout);
+        // Check for Admin or Moderator role
+        if (!(msg.member.roles.cache.has(adminRole) || msg.member.roles.cache.has(moderatorRole))) {
+            sendMessageWithTimeout(msg, 'Adding missions requires the Admin or Moderator role.', msgTimeout);
         }
         else {
             // Only add if values present
@@ -88,9 +89,9 @@ client.on('message', (msg) => {
     // Remove mission (admin only) 
     else if (command === 'removemission' || command === 'rm') {
 
-        // Check for Admin role
-        if (!msg.member.roles.cache.has(adminRole)) {
-            sendMessageWithTimeout(msg, 'Removing missions requires the Admin role.', msgTimeout);
+        // Check for Admin or Moderator role
+        if (!(msg.member.roles.cache.has(adminRole) || msg.member.roles.cache.has(moderatorRole))) {
+            sendMessageWithTimeout(msg, 'Removing missions requires the Admin or Moderator role.', msgTimeout);
         }
         else {
             // Check if mission exists
@@ -105,30 +106,31 @@ client.on('message', (msg) => {
         }
     }
 
-    // List missions
-    else if (command === 'missions' || command === 'miss') {
+    // Clear all missions (admin only)
+    else if (command === 'clearmissions' || command === 'cm') {
 
-        // Check if empty
-        if (isEmpty(missions)) {
-            sendMessageWithTimeout(msg, 'No missions at the moment.', msgTimeout);
+        // Check for Admin or Moderator role
+        if (!(msg.member.roles.cache.has(adminRole) || msg.member.roles.cache.has(moderatorRole))) {
+            sendMessageWithTimeout(msg, 'Clearing missions requires the Admin or Moderator role.', msgTimeout);
         }
         else {
-            // No timeout 
-            var missionMsg = '-- 👾 -- INVader Missions -- 👾 --\n\n';
-            for (var m in missions) {
-                missionMsg += m + ': ' + missions[m] + '\n\n';
+            // Check if empty
+            if (isEmpty(missions)) {
+                sendMessageWithTimeout(msg, 'No missions to clear.', msgTimeout);
             }
-            missionMsg += 'Missions take less than a minute of your time but help the DAO greatly to stay trending';
-            msg.channel.send(missionMsg);
+            else {
+                missions = {};
+                sendMessageWithTimeout(msg, 'Missions cleared.', msgTimeout);
+            }
         }
     }
 
-    // List missions + announce
-    else if (command === 'missionsblast' || command === 'missb') {
+    // List missions (admin only)
+    else if (command === 'missions' || command === 'miss') {
 
-        // Check for Admin role
-        if (!msg.member.roles.cache.has(adminRole)) {
-            sendMessageWithTimeout(msg, 'Blasting missions requires the Admin role.', msgTimeout);
+        // Check for Admin or Moderator role
+        if (!(msg.member.roles.cache.has(adminRole) || msg.member.roles.cache.has(moderatorRole))) {
+            sendMessageWithTimeout(msg, 'Listing missions requires the Admin or Moderator role.', msgTimeout);
         }
         else {
             // Check if empty
@@ -137,11 +139,35 @@ client.on('message', (msg) => {
             }
             else {
                 // No timeout
-                var missionMsg = '-- 👾 -- INVader Missions -- 👾 --\n\n';
+                var missionMsg = '**---- 👾 ---- INVader Missions ---- 👾 ----**\n\n';
                 for (var m in missions) {
                     missionMsg += m + ': ' + missions[m] + '\n\n';
                 }
-                missionMsg += 'Missions take less than a minute of your time but help the DAO greatly to stay trending.\n\n';
+                missionMsg += '**Missions take less than a minute of your time but help the DAO greatly to stay trending**';
+                msg.channel.send(missionMsg);
+            }
+        }
+    }
+
+    // List missions + announce (admin only)
+    else if (command === 'missionsblast' || command === 'missb') {
+
+        // Check for Admin or Moderator role
+        if (!(msg.member.roles.cache.has(adminRole) || msg.member.roles.cache.has(moderatorRole))) {
+            sendMessageWithTimeout(msg, 'Blasting missions requires the Admin or Moderator role.', msgTimeout);
+        }
+        else {
+            // Check if empty
+            if (isEmpty(missions)) {
+                sendMessageWithTimeout(msg, 'No missions at the moment.', msgTimeout);
+            }
+            else {
+                // No timeout
+                var missionMsg = '**---- 👾 ---- INVader Missions ---- 👾 ----**\n\n';
+                for (var m in missions) {
+                    missionMsg += m + ': ' + missions[m] + '\n\n';
+                }
+                missionMsg += '**Missions take less than a minute of your time but help the DAO greatly to stay trending.**\n\n';
                 missionMsg += '<@&' + invaderRole + '>';
                 msg.channel.send(missionMsg);
             }
@@ -160,11 +186,12 @@ const commandsEmbed = new Discord.MessageEmbed()
     .addField('Accounts', '/accounts or /acc')
     .addField('Contracts', '/contracts or /con')
     .addField('Tokens', '/tokens or /tok')
-    .addField('Missions', '/missions or /miss')
-    .addField('Missions Blast', '/missionsblast or /missb')
-    .addField('Add Mission (Admin only)', '/addmission or /am  - Use | to separate. E.g. /am|1|The first mission')
-    .addField('Remove Mission (Admin only)', '/removemission or /rm - Use | to separate. E.g. /rm|1')
-    .setFooter('Embed timeout: ' + (msgTimeout / 1000) + 'sec');
+    .addField('List Missions*', '/missions or /miss')
+    .addField('List Missions & Blast*', '/missionsblast or /missb - List missions and @ the INVader_OnDuty role')
+    .addField('Add Mission*', '/addmission or /am  - Use | to separate. E.g. /am|Task 1|The first mission')
+    .addField('Remove Mission*', '/removemission or /rm - Use | to separate. E.g. /rm|Task 1')
+    .addField('Clear Missions*', '/clearmissions or /cm')
+    .setFooter('* = Admin/Moderator only. Embed timeout: ' + (msgTimeout / 1000) + 'sec');
 
 
 //-------------------------------------------------------------------------- Accounts
@@ -228,14 +255,15 @@ const officialLinks = new Discord.MessageEmbed()
     .addField('Twitter', '[https://twitter.com/InverseFinance](https://twitter.com/InverseFinance)')
     .addField('Medium', '[https://medium.com/inversefinance ](https://medium.com/inversefinance )')
     .addField('Github', '[https://github.com/InverseFinance](https://github.com/InverseFinance)')
-    .addField('Dex Tools Uniswap', '[https://www.dextools.io/app/uniswap/pair-explorer/0x73e02eaab68a41ea63bdae9dbd4b7678827b2352](https://www.dextools.io/app/uniswap/pair-explorer/0x73e02eaab68a41ea63bdae9dbd4b7678827b2352)')
-    .addField('Dex Tools DOLA', '[https://www.dextools.io/app/uniswap/pair-explorer/0xecfbe9b182f6477a93065c1c11271232147838e5](https://www.dextools.io/app/uniswap/pair-explorer/0xecfbe9b182f6477a93065c1c11271232147838e5)')
-    .addField('INV-ETH Uniswap Pool', '[https://app.uniswap.org/#/swap?inputCurrency=0x41d5d79431a913c4ae7d69a668ecdfe5ff9dfb68](https://app.uniswap.org/#/swap?inputCurrency=0x41d5d79431a913c4ae7d69a668ecdfe5ff9dfb68)')
-    .addField('INV-ETH Uniswap Pair', '[https://info.uniswap.org/pair/0x73e02eaab68a41ea63bdae9dbd4b7678827b2352](https://info.uniswap.org/pair/0x73e02eaab68a41ea63bdae9dbd4b7678827b2352)')
-    .addField('DOLA-ETH Uniswap Pool', '[https://app.uniswap.org/#/swap?inputCurrency=0x865377367054516e17014ccded1e7d814edc9ce4&outputCurrency=ETH](https://app.uniswap.org/#/swap?inputCurrency=0x865377367054516e17014ccded1e7d814edc9ce4&outputCurrency=ETH)')
-    .addField('DOLA-ETH Uniswap Pair', '[https://info.uniswap.org/pair/0xecfbe9b182f6477a93065c1c11271232147838e5](https://info.uniswap.org/pair/0xecfbe9b182f6477a93065c1c11271232147838e5)')
+    .addField('Dune Analytics', '[http://bit.ly/INV_DUNE](http://bit.ly/INV_DUNE)')
+    .addField('Tally Governance', '[]()')
+    .addField('Dex Tools WETH-INV', '[Dex Tools](https://www.dextools.io/app/uniswap/pair-explorer/0x73e02eaab68a41ea63bdae9dbd4b7678827b2352)')
+    .addField('Dex Tools WETH-DOLA', '[Dex Tools](https://www.dextools.io/app/uniswap/pair-explorer/0xecfbe9b182f6477a93065c1c11271232147838e5)')
+    .addField('INV-ETH Uniswap Trade', '[Uniswap](https://app.uniswap.org/#/swap?inputCurrency=0x41d5d79431a913c4ae7d69a668ecdfe5ff9dfb68)')
+    .addField('INV-ETH Uniswap Pair', '[Uniswap](https://info.uniswap.org/pair/0x73e02eaab68a41ea63bdae9dbd4b7678827b2352)')
+    .addField('DOLA-ETH Uniswap Trade', '[Uniswap](https://app.uniswap.org/#/swap?inputCurrency=0x865377367054516e17014ccded1e7d814edc9ce4&outputCurrency=ETH)')
+    .addField('DOLA-ETH Uniswap Pair', '[Uniswap](https://info.uniswap.org/pair/0xecfbe9b182f6477a93065c1c11271232147838e5)')
     .addField('Buy DOLA', '[https://inverse.finance/stabilizer](https://inverse.finance/stabilizer)')
-    .addField('Stake DOLA-ETH LP', '[https://inverse.finance/stake](https://inverse.finance/stake)')
     .setFooter('Embed timeout: ' + (msgTimeout / 1000) + 'sec');
 
 
