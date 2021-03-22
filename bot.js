@@ -18,7 +18,7 @@ const msgTimeout = 35000;
 
 // Role IDs
 const adminRole = '790157976840175636'; // IF Admin Role 790157976840175636 // Test Admin Role 820466679179378688
-const invaderRole = '820973908710785074'; // IF INVader_OnDuty 820973908710785074 // Test Member Role 820765260553781349
+const invaderRole = '820315906836135976'; // IF INVader_OnDuty 820315906836135976 // Test Member Role 820765260553781349
 const moderatorRole = '790158060617465876'; // IF Moderator Role 790158060617465876 // Test Moderator Role 822910441889071104
 
 // Global scope storage for mission data
