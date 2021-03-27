@@ -5,30 +5,41 @@
 //
 
 const Discord = require('discord.js');
+const fs = require('fs');
 require('dotenv').config();
 
 // Create client instance
 const client = new Discord.Client();
 
+// Load config data
+let config = loadConfigData();
+
 // Bot prefix
-const prefix = "/";
+const prefix = config.prefix; 
 
 // Message delete timeout 
-const msgTimeout = 35000;
+const msgTimeout = config.msg_delete_timeout;
 
-// Role IDs
-const adminRole = '790157976840175636'; // IF Admin Role 790157976840175636 // Test Admin Role 820466679179378688
-const invaderRole = '820315906836135976'; // IF INVader_OnDuty 820315906836135976 // Test Member Role 820765260553781349
-const moderatorRole = '790158060617465876'; // IF Moderator Role 790158060617465876 // Test Moderator Role 822910441889071104
+// IF Discord Role IDs
+const adminRoleId = config.inv_admin_role_id;
+const moderatorRoleId = config.inv_mod_role_id;
+const invaderOnDutyRoleId = config.inv_invader_onduty_role_id;
 
-// Global scope storage for mission data
-var missions = {};
+// Test Role IDs
+//const adminRoleId = config.test_admin_role_id;
+//const moderatorRoleId = config.test_mod_role_id;
+//const invaderOnDutyRoleId = config.test_member_role_id;
+
+// Global scope storage for mission data 
+var missions = config.missions_data;
 
 // Login to server 
 client.login(process.env.DISCORD_BOT_TOKEN);
 
 // Confirm connection 
 client.on('ready', () => console.log('The INVader Bot is ready!'));
+
+console.log(config);
 
 
 //-------------------------------------------------------------------------- Command Parser
@@ -71,17 +82,20 @@ client.on('message', (msg) => {
     else if (command === 'addmission' || command === 'am') {
 
         // Check for Admin or Moderator role
-        if (!(msg.member.roles.cache.has(adminRole) || msg.member.roles.cache.has(moderatorRole))) {
+        if (!(msg.member.roles.cache.has(adminRoleId) || msg.member.roles.cache.has(moderatorRoleId))) {
             sendMessageWithTimeout(msg, 'Adding missions requires the Admin or Moderator role.', msgTimeout);
         }
         else {
             // Only add if values present
             if (!args[1] || !args[2]) {
-                sendMessageWithTimeout(msg, 'Nothing to add. Provide both a key and a value. E.g. /am|1|The first mission', msgTimeout);
+                sendMessageWithTimeout(msg, 'Nothing to add. Provide both a title and a description. E.g. /am|Mission 1|The first mission', msgTimeout);
             }
             else {
                 missions[args[1]] = args[2];
                 sendMessageWithTimeout(msg, 'Mission added: ' + args[1] + ': ' + args[2], msgTimeout);
+
+                // Save the change to the config json file 
+                updateConfigData('missions_data', missions);
             }
         }
     }
@@ -90,7 +104,7 @@ client.on('message', (msg) => {
     else if (command === 'removemission' || command === 'rm') {
 
         // Check for Admin or Moderator role
-        if (!(msg.member.roles.cache.has(adminRole) || msg.member.roles.cache.has(moderatorRole))) {
+        if (!(msg.member.roles.cache.has(adminRoleId) || msg.member.roles.cache.has(moderatorRoleId))) {
             sendMessageWithTimeout(msg, 'Removing missions requires the Admin or Moderator role.', msgTimeout);
         }
         else {
@@ -102,6 +116,9 @@ client.on('message', (msg) => {
                 sendMessageWithTimeout(msg, 'Mission removed: ' + args[1] + ': ' + missions[args[1]], msgTimeout);
 
                 delete missions[args[1]];
+
+                // Save the change to the config json file 
+                updateConfigData('missions_data', missions);
             }
         }
     }
@@ -110,7 +127,7 @@ client.on('message', (msg) => {
     else if (command === 'clearmissions' || command === 'cm') {
 
         // Check for Admin or Moderator role
-        if (!(msg.member.roles.cache.has(adminRole) || msg.member.roles.cache.has(moderatorRole))) {
+        if (!(msg.member.roles.cache.has(adminRoleId) || msg.member.roles.cache.has(moderatorRoleId))) {
             sendMessageWithTimeout(msg, 'Clearing missions requires the Admin or Moderator role.', msgTimeout);
         }
         else {
@@ -121,6 +138,9 @@ client.on('message', (msg) => {
             else {
                 missions = {};
                 sendMessageWithTimeout(msg, 'Missions cleared.', msgTimeout);
+
+                // Save the change to the config json file 
+                updateConfigData('missions_data', missions);
             }
         }
     }
@@ -129,7 +149,7 @@ client.on('message', (msg) => {
     else if (command === 'missions' || command === 'miss') {
 
         // Check for Admin or Moderator role
-        if (!(msg.member.roles.cache.has(adminRole) || msg.member.roles.cache.has(moderatorRole))) {
+        if (!(msg.member.roles.cache.has(adminRoleId) || msg.member.roles.cache.has(moderatorRoleId))) {
             sendMessageWithTimeout(msg, 'Listing missions requires the Admin or Moderator role.', msgTimeout);
         }
         else {
@@ -138,12 +158,15 @@ client.on('message', (msg) => {
                 sendMessageWithTimeout(msg, 'No missions at the moment.', msgTimeout);
             }
             else {
+                // Remove original call
+                msg.delete();
+
                 // No timeout
-                var missionMsg = '**---- 👾 ---- INVader Missions ---- 👾 ----**\n\n';
+                var missionMsg = config.missions_header;
                 for (var m in missions) {
                     missionMsg += m + ': ' + missions[m] + '\n\n';
                 }
-                missionMsg += '**Missions take less than a minute of your time but help the DAO greatly to stay trending**';
+                missionMsg += config.missions_footer;
                 msg.channel.send(missionMsg);
             }
         }
@@ -153,7 +176,7 @@ client.on('message', (msg) => {
     else if (command === 'missionsblast' || command === 'missb') {
 
         // Check for Admin or Moderator role
-        if (!(msg.member.roles.cache.has(adminRole) || msg.member.roles.cache.has(moderatorRole))) {
+        if (!(msg.member.roles.cache.has(adminRoleId) || msg.member.roles.cache.has(moderatorRoleId))) {
             sendMessageWithTimeout(msg, 'Blasting missions requires the Admin or Moderator role.', msgTimeout);
         }
         else {
@@ -162,13 +185,16 @@ client.on('message', (msg) => {
                 sendMessageWithTimeout(msg, 'No missions at the moment.', msgTimeout);
             }
             else {
+                // Remove original call 
+                msg.delete();
+
                 // No timeout
-                var missionMsg = '**---- 👾 ---- INVader Missions ---- 👾 ----**\n\n';
+                var missionMsg = config.missions_header;
                 for (var m in missions) {
                     missionMsg += m + ': ' + missions[m] + '\n\n';
                 }
-                missionMsg += '**Missions take less than a minute of your time but help the DAO greatly to stay trending.**\n\n';
-                missionMsg += '<@&' + invaderRole + '>';
+                missionMsg += config.missions_footer;
+                missionMsg += '<@&' + invaderOnDutyRoleId + '>';
                 msg.channel.send(missionMsg);
             }
         }
@@ -274,6 +300,27 @@ function sendMessageWithTimeout(msgObj, msgToSend, timeout) {
     msgObj.channel.send(msgToSend).then(embedMessage => {
         setTimeout(() => msgObj.delete(), timeout);
         setTimeout(() => embedMessage.delete(), timeout);
+    });
+}
+
+// Load config data
+function loadConfigData() {
+    return JSON.parse(fs.readFileSync('config.json', 'utf-8'));
+}
+
+// Update config data
+function updateConfigData(key, value) {
+    config[key] = value;
+    saveConfigData();
+}
+
+// Save config data
+function saveConfigData() {
+    const json = JSON.stringify(config);
+    fs.writeFile('config.json', json, (err) => {
+        if (err) {
+            console.log(err);
+        }
     });
 }
 
